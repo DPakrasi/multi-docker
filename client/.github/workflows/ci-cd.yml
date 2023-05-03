@@ -1,0 +1,31 @@
+name: CI CD Workflow
+on:
+  push:
+    branches:
+      - "main"
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout The Repo
+        uses: actions/checkout@v3
+      - name: Docker Login
+        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: Docker Build
+        run: docker build -t ksumit/learn-docker -f dev.Dockerfile .
+      - name: Run Image
+        run: docker run -e CI=true -t ksumit/learn-docker npm test
+      - name: Generate deployment package
+        run: zip -r deploy-v2.zip . -x '*.git*'
+      - name: Deploy to EB
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+          application_name: learn-docker
+          environment_name: Learndocker-env
+          existing_bucket_name: elasticbeanstalk-us-east-1-621136546756
+          region: us-east-1
+          version_label: ${{ github.sha }}
+          deployment_package: deploy-v2.zip
+
